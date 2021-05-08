@@ -28,6 +28,10 @@ This extension contributes the following settings:
 
 ## Release Notes
 
+### 1.5.0
+
+- Added literate coffeescript support. Upgrage VSCode language server model.
+
 ### 1.4.0
 
 - Update to newest VSCode language server model.

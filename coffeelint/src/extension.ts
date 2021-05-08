@@ -1,33 +1,53 @@
 'use strict';
 
 import * as path from 'path';
+import { workspace, ExtensionContext } from 'vscode';
+import {
+	LanguageClient,
+	LanguageClientOptions,
+	ServerOptions,
+	TransportKind
+} from 'vscode-languageclient/node';
 
-import { Disposable, ExtensionContext, workspace } from 'vscode';
-// tslint:disable-next-line:max-line-length
-import { LanguageClient, LanguageClientOptions, ServerOptions, SettingMonitor, TransportKind } from 'vscode-languageclient';
+let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
-	let serverModule = context.asAbsolutePath(path.join('server/src', 'server.js'));
-	let debugOptions = { execArgv: ["--nolazy", "--debug=6004"] };
+	// The server is implemented in node
+	let serverModule = context.asAbsolutePath(
+		path.join('server', 'src', 'server.js')
+	);
+	// The debug options for the server
+	// --inspect=6011: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
+	let debugOptions = { execArgv: ['--nolazy', '--inspect=6011'] };
 
+	// If the extension is launched in debug mode then the debug server options are used
+	// Otherwise the run options are used
 	let serverOptions: ServerOptions = {
 		run: { module: serverModule, transport: TransportKind.ipc },
-		debug: { module: serverModule, transport: TransportKind.ipc, options: debugOptions }
-	};
-
-	let clientOptions: LanguageClientOptions = {
-		documentSelector: ['coffeescript'],
-		diagnosticCollectionName: 'coffeelint',
-		synchronize: {
-			configurationSection: 'coffeelinter',
-			fileEvents: workspace.createFileSystemWatcher('**/coffeelint.json')
+		debug: {
+			module: serverModule,
+			transport: TransportKind.ipc,
+			options: debugOptions
 		}
 	};
 
-	let client = new LanguageClient('CoffeeLint Client', serverOptions, clientOptions);
-	context.subscriptions.push(client.start());
+	// Options to control the language client
+	let clientOptions: LanguageClientOptions = {
+		// Register the server for plain text documents
+		documentSelector: [{ scheme: 'file', language: 'coffeescipt' }],
+		synchronize: {
+			// Notify the server about file changes to '.coffeelint.json files contained in the workspace
+			fileEvents: workspace.createFileSystemWatcher('**/.coffeelint.json')
+		}
+	};
+
+	client = new LanguageClient('coffeeLint', 'CoffeeLint Client', serverOptions, clientOptions);
+	client.start();
 }
 
-export function deactivate() {
-	console.log("CoffeeLint deactivate");
+export function deactivate(): Thenable<void> | undefined {
+	if (!client) {
+		return undefined;
+	}
+	return client.stop();
 }
